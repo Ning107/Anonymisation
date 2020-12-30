@@ -19,7 +19,7 @@ for file in files:
         for line in iter_f:
             text += line # la variable "text" contient le contenu de chaque fichier
 
-#text = "Téléphone : 04-77-30-48-44 ou 06-87-58-12-62 ou 07.70.50.22.22 ou 06 72 34 65 62 ou 0632121854 . Et l' adresse mail de Léa est ningzgre@gmial.com"
+# text = "Téléphone : 04-77-30-48-44 ou 06-87-58-12-62 ou 07.70.50.22.22 ou 06 72 34 65 62 ou 0632121854 . Et l' adresse mail de Léa est ningzgre@gmial.com"
 
         processeur = spacy.load("fr")
         contenu = processeur(text)
@@ -74,6 +74,33 @@ for file in files:
         for mail in mails:
             text = text.replace(mail, '[Mail]')
 
+
+        ########## Adresse ##########
+
+        voies = ["rue", "place", "avenue", "boulevard", "allée"]
+
+        # repérer les adresses ou nom des rues
+        patternLieu = [{"IS_DIGIT" : True},    # n° de rue
+                        {"LOWER" : {"IN" : voies }},  # type de voie
+                        # {"POS" : "DET", "OP" : "*"},  # déterminant(s) (facultatif) -> ça marche pas
+                        {"POS" : "PROPN", "OP" : "+"}    # nom de la voie
+                        # {"TEXT":{"REGEX": "[0-9]{5}"}}  # code postal
+                        ]
+        # ici il reconnaît que les adresses de type "NUM + voie + NOM" (12 rue Pasteur)
+
+
+        matcher.add("Lieu", None, patternLieu)
+        matches = matcher(contenu)
+
+        lieux = []
+        for match_id, start, end in matches:
+            span = contenu[start:end]
+            lieux.append(span.text)
+
+        for lieu in lieux :
+            text = text.replace(lieu, '[LIEU]')
+
+
         ########## entités nommées ##########
 
         # Reconnaitre les entités nommées
@@ -83,8 +110,8 @@ for file in files:
 
         # anaonymiser les entités nommées par leurs étiquettes
         for elt in Enti:
-            print(elt)
+            # print(elt)
             text = text.replace(elt[0],"["+elt[1]+"]")
 
-        print(text)
 
+        print(text)
