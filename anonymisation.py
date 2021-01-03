@@ -16,13 +16,15 @@ for file in files:
         f = open(path + "/" + file);
         iter_f = iter(f)
         text = ""
+        name = os.path.basename(file)
         for line in iter_f:
             text += line # la variable "text" contient le contenu de chaque fichier
 
 # text = "Téléphone : 04-77-30-48-44 ou 06-87-58-12-62 ou 07.70.50.22.22 ou 06 72 34 65 62 ou 0632121854 . Et l' adresse mail de Léa est ningzgre@gmial.com"
 
         processeur = spacy.load("fr")
-        contenu = processeur(text)
+        contenu = processeur(text.lower())
+        contenuOrig = processeur(text)
 
         # initialiser Matcher
         matcher = Matcher(processeur.vocab)
@@ -50,14 +52,14 @@ for file in files:
         # trouver tous les matches dans le texte
         matches = matcher(contenu)
 
-        # anonymiser les numeros trouves
+        # anonymiser les numeros trouves comme [Tel]
         tels = []
         for match_id, start, end in matches:
-            span = contenu[start:end]
+            span = contenuOrig[start:end]
             tels.append(span.text)
 
         for tel in tels:
-            text = text.replace(tel,'[Tel]')
+            text = text.replace(tel,'[TEL]')
 
         ########## Mail ##########
         # match le contenu de email
@@ -68,12 +70,11 @@ for file in files:
         # anonymiser les mails trouves
         mails = []
         for match_id, start, end in matches:
-            span = contenu[start:end]
+            span = contenuOrig[start:end]
             mails.append(span.text)
 
         for mail in mails:
-            text = text.replace(mail, '[Mail]')
-
+            text = text.replace(mail, '[MAIL]')
 
         ########## Adresse ##########
 
@@ -94,24 +95,40 @@ for file in files:
 
         lieux = []
         for match_id, start, end in matches:
-            span = contenu[start:end]
+            span = contenuOrig[start:end]
             lieux.append(span.text)
 
         for lieu in lieux :
             text = text.replace(lieu, '[LIEU]')
 
-
         ########## entités nommées ##########
 
         # Reconnaitre les entités nommées
         Enti = []
+        Exclu = ["TEL", "MAIL", "LIEU"]
         for ent in contenu.ents:
-            Enti.append((ent.text,ent.label_))
+            start = ent.start_char
+            end = start+len(ent.text)
+            # on examine uniquement "LOC","PER","ORG"
+            if str(ent) not in Exclu and ent.label_ != "MISC":
+                # Enti.append((ent.text,ent.label_))
+                tmp = processeur(str(ent))
+                # Pour les mots de "PER", s'ils ne sont pas composés pas par les mots propres, on l'enlève.
+                if ent.label_ == "PER":
+                    perTrue = False
+                    for token in tmp:
+                        if token.pos_ == "PROPN":
+                            perTrue = True
+                    if perTrue:
+                        Enti.append((contenuOrig.text[start:end], ent.label_))
+                else:
+                    Enti.append((contenuOrig.text[start:end], ent.label_))
 
         # anaonymiser les entités nommées par leurs étiquettes
         for elt in Enti:
             # print(elt)
+
             text = text.replace(elt[0],"["+elt[1]+"]")
 
-
-        print(text)
+        with open("Corpus_anony/" + name, "w") as fichier:
+            fichier.write(text)

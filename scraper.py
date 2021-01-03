@@ -17,5 +17,5 @@ for lien in a :
     name = lien[len(lien)-14:len(lien)-4]
     print(summary.text)
     print(descr.text)
-    with open("Corpus/"+name+"txt","w") as fichier:
+    with open("Corpus/"+name+".txt","w") as fichier:
         fichier.write(summary.text+"\n"+descr.text)
